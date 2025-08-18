@@ -123,9 +123,20 @@ function addMessage(content, type, sources = null, isWelcome = false) {
     
     if (sources && sources.length > 0) {
         const sourceLinks = sources.map(source => {
-            // Create a clickable link for each source
-            return `<span class="source-link">${escapeHtml(source)}</span>`;
-        }).join(', ');
+            // Handle both old string format and new object format for backward compatibility
+            if (typeof source === 'string') {
+                return `<span class="source-link">${escapeHtml(source)}</span>`;
+            } else if (source && source.text) {
+                // New format with text and optional link
+                if (source.link) {
+                    return `<a href="${escapeHtml(source.link)}" target="_blank" class="source-link clickable">${escapeHtml(source.text)}</a>`;
+                } else {
+                    return `<span class="source-link">${escapeHtml(source.text)}</span>`;
+                }
+            } else {
+                return `<span class="source-link">Unknown source</span>`;
+            }
+        }).join('');
         
         html += `
             <details class="sources-collapsible">

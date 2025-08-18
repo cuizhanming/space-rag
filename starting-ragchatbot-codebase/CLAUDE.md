@@ -9,11 +9,13 @@ This is a Course Materials RAG (Retrieval-Augmented Generation) system that impl
 ## Development Commands
 
 **Install dependencies:**
+
 ```bash
 uv sync
 ```
 
 **Run the application:**
+
 ```bash
 ./run.sh
 # OR manually:
@@ -21,8 +23,10 @@ cd backend && uv run uvicorn app:app --reload --port 8000
 ```
 
 **Environment setup:**
+
 Create `.env` file in project root with:
-```
+
+```bash
 ANTHROPIC_API_KEY=your_key_here
 ```
 
@@ -33,6 +37,7 @@ ANTHROPIC_API_KEY=your_key_here
 The system uses a **tool-based RAG architecture** where Claude autonomously decides when to search, rather than always retrieving context. This is implemented through a sophisticated workflow:
 
 **Tool-Based Search Flow:**
+
 1. User query → Claude receives query + tool definitions
 2. Claude decides autonomously whether to search based on query type
 3. If needed, calls `CourseSearchTool` with optional course/lesson filtering  
@@ -41,10 +46,12 @@ The system uses a **tool-based RAG architecture** where Claude autonomously deci
 6. Sources tracked automatically for UI display
 
 **Dual Vector Storage Pattern:**
+
 - `course_catalog` collection: Course metadata (titles, instructors, links) for semantic course name matching
 - `course_content` collection: Chunked course content with lesson-level metadata
 
 **Backend Structure (`backend/`):**
+
 - `app.py` - FastAPI with custom `DevStaticFiles` (no-cache headers for development)
 - `rag_system.py` - Main orchestrator coordinating all components
 - `vector_store.py` - ChromaDB interface with dual collection management
@@ -56,6 +63,7 @@ The system uses a **tool-based RAG architecture** where Claude autonomously deci
 - `config.py` - Configuration with claude-sonnet-4-20250514 hardcoded
 
 **Frontend (`frontend/`):**
+
 - Vanilla JavaScript with Marked.js for markdown rendering
 - Session state management with loading animations
 - Source display in collapsible sections with suggested questions
@@ -63,7 +71,7 @@ The system uses a **tool-based RAG architecture** where Claude autonomously deci
 ## Key Configuration
 
 - **Model**: claude-sonnet-4-20250514 (hardcoded in config)
-- **Embedding model**: all-MiniLM-L6-v2 
+- **Embedding model**: all-MiniLM-L6-v2
 - **Chunk size**: 800 characters with 100 character overlap
 - **Max search results**: 5 per query
 - **Conversation history**: 2 previous message exchanges
@@ -74,7 +82,8 @@ The system uses a **tool-based RAG architecture** where Claude autonomously deci
 ## Course Document Format
 
 **Required structured headers:**
-```
+
+```text
 Course Title: [title]
 Course Link: [url]
 Course Instructor: [instructor]
@@ -85,6 +94,7 @@ Lesson Link: [lesson_url]
 ```
 
 **Processing behavior:**
+
 - Metadata extracted from structured headers
 - Content chunked by sentence boundaries with overlap
 - Chunks prefixed with lesson context: "Course [title] Lesson [N] content: [chunk]"
@@ -93,6 +103,7 @@ Lesson Link: [lesson_url]
 ## AI Generation Strategy
 
 **System Prompt Rules** (`ai_generator.py:8-30`):
+
 - "One search per query maximum" - prevents excessive tool usage
 - Distinguishes general knowledge vs course-specific questions
 - No meta-commentary: "Do not mention 'based on the search results'"
@@ -103,6 +114,7 @@ Lesson Link: [lesson_url]
 ## Session Management
 
 **Session Lifecycle:**
+
 - Auto-created on first query if no session_id provided
 - Maintains 2 previous message exchanges (configurable in config)
 - History formatted as: "User: [question]\nAssistant: [response]"
@@ -133,4 +145,5 @@ Lesson Link: [lesson_url]
 ## Dependencies
 
 Built with Python 3.13+, UV package manager. Core dependencies: FastAPI, ChromaDB, Anthropic SDK, Sentence Transformers. Uses pinned versions for stability (ChromaDB 1.0.15, Anthropic 0.58.2).
+
 - use uv to run python files and manage all dependencies

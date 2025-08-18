@@ -40,10 +40,15 @@ class QueryRequest(BaseModel):
     query: str
     session_id: Optional[str] = None
 
+class SourceLink(BaseModel):
+    """Model for source with optional clickable link"""
+    text: str
+    link: Optional[str] = None
+
 class QueryResponse(BaseModel):
     """Response model for course queries"""
     answer: str
-    sources: List[str]
+    sources: List[SourceLink]
     session_id: str
 
 class CourseStats(BaseModel):
@@ -65,9 +70,18 @@ async def query_documents(request: QueryRequest):
         # Process query using RAG system
         answer, sources = rag_system.query(request.query, session_id)
         
+        # Convert source dictionaries to SourceLink objects
+        source_links = []
+        for source in sources:
+            if isinstance(source, dict):
+                source_links.append(SourceLink(text=source['text'], link=source.get('link')))
+            else:
+                # Backward compatibility for string sources
+                source_links.append(SourceLink(text=str(source), link=None))
+        
         return QueryResponse(
             answer=answer,
-            sources=sources,
+            sources=source_links,
             session_id=session_id
         )
     except Exception as e:
