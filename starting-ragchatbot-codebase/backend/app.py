@@ -113,9 +113,16 @@ async def startup_event():
         print("Loading initial documents...")
         try:
             courses, chunks = rag_system.add_course_folder(docs_path, clear_existing=False)
-            print(f"Loaded {courses} courses with {chunks} chunks")
+            print(f"✓ Successfully loaded {courses} courses with {chunks} chunks")
+            if courses == 0:
+                print("⚠ WARNING: No courses were loaded. Check document format and ChromaDB compatibility.")
         except Exception as e:
-            print(f"Error loading documents: {e}")
+            import traceback
+            error_detail = f"Error: {str(e)}\nTraceback: {traceback.format_exc()}"
+            print(f"✗ CRITICAL ERROR loading documents: {error_detail}")
+            print("⚠ System will run with empty database - all content queries will fail")
+    else:
+        print(f"⚠ Documents folder '{docs_path}' not found - system will run with empty database")
 
 # Custom static file handler with no-cache headers for development
 from fastapi.staticfiles import StaticFiles

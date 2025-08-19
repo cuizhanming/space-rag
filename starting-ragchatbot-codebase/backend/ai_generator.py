@@ -5,21 +5,28 @@ class AIGenerator:
     """Handles interactions with Anthropic's Claude API for generating responses"""
     
     # Static system prompt to avoid rebuilding on each call
-    SYSTEM_PROMPT = """ You are an AI assistant specialized in course materials and educational content with access to a comprehensive search tool for course information.
+    SYSTEM_PROMPT = """ You are an AI assistant specialized in course materials and educational content with access to comprehensive search tools for course information.
 
-Search Tool Usage:
-- Use the search tool **only** for questions about specific course content or detailed educational materials
-- **One search per query maximum**
-- Synthesize search results into accurate, fact-based responses
-- If search yields no results, state this clearly without offering alternatives
+Available Tools:
+- **search_course_content**: Search for specific content within course materials
+- **get_course_outline**: Get complete course structure including title, link, instructor, and all lessons with their titles and numbers
+
+Tool Usage Guidelines:
+- **Course outline queries**: Use get_course_outline tool for questions about course structure, lesson lists, or general course information
+- **Content-specific queries**: Use search_course_content tool for questions about specific topics, concepts, or detailed educational materials
+- **Multi-step queries**: You may use up to 2 tools sequentially for complex questions requiring multiple searches or comparisons
+- **Tool sequencing**: Use initial tool results to inform subsequent tool calls for comprehensive answers
+- Synthesize tool results into accurate, fact-based responses
+- If tools yield no results, state this clearly without offering alternatives
 
 Response Protocol:
-- **General knowledge questions**: Answer using existing knowledge without searching
-- **Course-specific questions**: Search first, then answer
+- **General knowledge questions**: Answer using existing knowledge without using tools
+- **Course outline questions**: Use get_course_outline tool, then provide the course title, course link, and complete lesson information (lesson number and title for each lesson)
+- **Course content questions**: Use search_course_content tool, then answer based on retrieved content
+- **Complex queries**: Use sequential tools as needed, then provide comprehensive synthesis
 - **No meta-commentary**:
- - Provide direct answers only — no reasoning process, search explanations, or question-type analysis
- - Do not mention "based on the search results"
-
+ - Provide direct answers only — no reasoning process, tool explanations, or question-type analysis
+ - Do not mention "based on the search results" or "using the tool"
 
 All responses must be:
 1. **Brief, Concise and focused** - Get to the point quickly
@@ -43,15 +50,17 @@ Provide only the direct answer to what was asked.
     def generate_response(self, query: str,
                          conversation_history: Optional[str] = None,
                          tools: Optional[List] = None,
-                         tool_manager=None) -> str:
+                         tool_manager=None,
+                         max_tool_rounds: int = 2) -> str:
         """
-        Generate AI response with optional tool usage and conversation context.
+        Generate AI response with sequential tool usage support.
         
         Args:
             query: The user's question or request
             conversation_history: Previous messages for context
             tools: Available tools the AI can use
             tool_manager: Manager to execute tools
+            max_tool_rounds: Maximum number of sequential tool calling rounds
             
         Returns:
             Generated response as string
@@ -64,72 +73,77 @@ Provide only the direct answer to what was asked.
             else self.SYSTEM_PROMPT
         )
         
-        # Prepare API call parameters efficiently
-        api_params = {
-            **self.base_params,
-            "messages": [{"role": "user", "content": query}],
-            "system": system_content
-        }
+        # Initialize conversation state
+        messages = [{"role": "user", "content": query}]
+        tool_rounds_used = 0
         
-        # Add tools if available
-        if tools:
-            api_params["tools"] = tools
-            api_params["tool_choice"] = {"type": "auto"}
-        
-        # Get response from Claude
-        response = self.client.messages.create(**api_params)
-        
-        # Handle tool execution if needed
-        if response.stop_reason == "tool_use" and tool_manager:
-            return self._handle_tool_execution(response, api_params, tool_manager)
-        
-        # Return direct response
-        return response.content[0].text
-    
-    def _handle_tool_execution(self, initial_response, base_params: Dict[str, Any], tool_manager):
-        """
-        Handle execution of tool calls and get follow-up response.
-        
-        Args:
-            initial_response: The response containing tool use requests
-            base_params: Base API parameters
-            tool_manager: Manager to execute tools
+        # Sequential tool calling loop
+        while tool_rounds_used < max_tool_rounds:
+            # Prepare API call parameters
+            api_params = {
+                **self.base_params,
+                "messages": messages,
+                "system": system_content
+            }
             
-        Returns:
-            Final response text after tool execution
-        """
-        # Start with existing messages
-        messages = base_params["messages"].copy()
-        
-        # Add AI's tool use response
-        messages.append({"role": "assistant", "content": initial_response.content})
-        
-        # Execute all tool calls and collect results
-        tool_results = []
-        for content_block in initial_response.content:
-            if content_block.type == "tool_use":
-                tool_result = tool_manager.execute_tool(
-                    content_block.name, 
-                    **content_block.input
-                )
-                
-                tool_results.append({
-                    "type": "tool_result",
-                    "tool_use_id": content_block.id,
-                    "content": tool_result
-                })
-        
-        # Add tool results as single message
-        if tool_results:
+            # Include tools only if we haven't exceeded rounds and tools are available
+            if tools and tool_rounds_used < max_tool_rounds:
+                api_params["tools"] = tools
+                api_params["tool_choice"] = {"type": "auto"}
+            
+            # Get response from Claude
+            response = self.client.messages.create(**api_params)
+            
+            # If no tool use, return the response
+            if response.stop_reason != "tool_use" or not tool_manager:
+                return response.content[0].text
+            
+            # Execute tools and continue conversation
+            messages.append({"role": "assistant", "content": response.content})
+            tool_results = self._execute_tools(response, tool_manager)
             messages.append({"role": "user", "content": tool_results})
+            
+            tool_rounds_used += 1
         
-        # Prepare final API call without tools
+        # Final response without tools after max rounds
         final_params = {
             **self.base_params,
             "messages": messages,
-            "system": base_params["system"]
+            "system": system_content
         }
-        
-        # Get final response
         final_response = self.client.messages.create(**final_params)
         return final_response.content[0].text
+    
+    def _execute_tools(self, response, tool_manager) -> List[Dict[str, Any]]:
+        """
+        Execute tools from Claude's response and return formatted results.
+        
+        Args:
+            response: The Claude response containing tool use requests
+            tool_manager: Manager to execute tools
+            
+        Returns:
+            List of formatted tool results for Claude's conversation
+        """
+        tool_results = []
+        for content_block in response.content:
+            if content_block.type == "tool_use":
+                try:
+                    tool_result = tool_manager.execute_tool(
+                        content_block.name, 
+                        **content_block.input
+                    )
+                    tool_results.append({
+                        "type": "tool_result",
+                        "tool_use_id": content_block.id,
+                        "content": tool_result
+                    })
+                except Exception as e:
+                    # Handle tool execution errors gracefully
+                    tool_results.append({
+                        "type": "tool_result",
+                        "tool_use_id": content_block.id,
+                        "content": f"Tool execution error: {str(e)}"
+                    })
+        return tool_results
+

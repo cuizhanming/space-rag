@@ -5,7 +5,7 @@ const API_URL = '/api';
 let currentSessionId = null;
 
 // DOM elements
-let chatMessages, chatInput, sendButton, totalCourses, courseTitles;
+let chatMessages, chatInput, sendButton, totalCourses, courseTitles, newChatButton;
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
@@ -15,6 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
     sendButton = document.getElementById('sendButton');
     totalCourses = document.getElementById('totalCourses');
     courseTitles = document.getElementById('courseTitles');
+    newChatButton = document.getElementById('newChatButton');
     
     setupEventListeners();
     createNewSession();
@@ -29,6 +30,8 @@ function setupEventListeners() {
         if (e.key === 'Enter') sendMessage();
     });
     
+    // New chat button
+    newChatButton.addEventListener('click', startNewChat);
     
     // Suggested questions
     document.querySelectorAll('.suggested-item').forEach(button => {
@@ -166,6 +169,20 @@ async function createNewSession() {
     currentSessionId = null;
     chatMessages.innerHTML = '';
     addMessage('Welcome to the Course Materials Assistant! I can help you with questions about courses, lessons and specific content. What would you like to know?', 'assistant', null, true);
+}
+
+// Function to start a new chat (called by the + NEW CHAT button)
+function startNewChat() {
+    // Clear the chat input if it has content
+    if (chatInput.value.trim()) {
+        chatInput.value = '';
+    }
+    
+    // Clear current session and create a new one
+    createNewSession();
+    
+    // Focus on the input for immediate typing
+    chatInput.focus();
 }
 
 // Load course statistics
