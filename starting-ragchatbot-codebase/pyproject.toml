@@ -13,4 +13,49 @@ dependencies = [
     "python-multipart==0.0.20",
     "python-dotenv==1.1.1",
     "idna>=3.10",
+    "pytest>=8.0.0",
+    "httpx>=0.25.0",
 ]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+addopts = ["-ra", "-q", "--strict-markers", "--strict-config"]
+testpaths = ["backend/tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+markers = [
+    "unit: marks tests as unit tests (deselect with '-m \"not unit\"')",
+    "integration: marks tests as integration tests (deselect with '-m \"not integration\"')",
+    "api: marks tests as API endpoint tests (deselect with '-m \"not api\"')",
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+]
+filterwarnings = [
+    "ignore::UserWarning",
+    "ignore::DeprecationWarning",
+    "ignore:.*resource_tracker.*:UserWarning",
+]
+
+[dependency-groups]
+dev = [
+    "black>=25.1.0",
+]
+
+[tool.black]
+line-length = 88
+target-version = ["py313"]
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+    # directories
+    \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+  | chroma_db
+)/
+'''

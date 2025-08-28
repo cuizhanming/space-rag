@@ -2,6 +2,7 @@
 Real component tests to identify actual system failures.
 These tests use actual instances to debug the 'query failed' issue.
 """
+
 import unittest
 import sys
 import os
@@ -24,9 +25,7 @@ class TestRealVectorStore(unittest.TestCase):
         """Set up test fixtures with temporary database"""
         self.temp_dir = tempfile.mkdtemp()
         self.vector_store = VectorStore(
-            chroma_path=self.temp_dir,
-            embedding_model="all-MiniLM-L6-v2",
-            max_results=5
+            chroma_path=self.temp_dir, embedding_model="all-MiniLM-L6-v2", max_results=5
         )
 
     def tearDown(self):
@@ -45,25 +44,31 @@ class TestRealVectorStore(unittest.TestCase):
         # Create test course data
         course = Course(
             title="Test Python Course",
-            instructor="Test Instructor", 
+            instructor="Test Instructor",
             course_link="https://example.com/python",
-            lessons=[Lesson(lesson_number=1, title="Variables", lesson_link="https://example.com/lesson1")]
+            lessons=[
+                Lesson(
+                    lesson_number=1,
+                    title="Variables",
+                    lesson_link="https://example.com/lesson1",
+                )
+            ],
         )
-        
+
         # Create test chunks
         chunks = [
             CourseChunk(
                 content="Python variables are used to store data values. Variables are created when you assign a value to them.",
                 course_title="Test Python Course",
                 lesson_number=1,
-                chunk_index=0
+                chunk_index=0,
             ),
             CourseChunk(
                 content="In Python you can create variables like x = 5 or name = 'John'. Python has different data types.",
-                course_title="Test Python Course", 
+                course_title="Test Python Course",
                 lesson_number=1,
-                chunk_index=1
-            )
+                chunk_index=1,
+            ),
         ]
 
         # Add course metadata and content
@@ -72,15 +77,17 @@ class TestRealVectorStore(unittest.TestCase):
 
         # Test search functionality
         results = self.vector_store.search("Python variables")
-        
+
         # Verify search results
         self.assertIsInstance(results, SearchResults)
         self.assertIsNone(results.error, f"Search returned error: {results.error}")
         self.assertFalse(results.is_empty(), "Search should return results")
         self.assertTrue(len(results.documents) > 0, "Should have document results")
-        
+
         # Check if content is found
-        found_variable_content = any("variables" in doc.lower() for doc in results.documents)
+        found_variable_content = any(
+            "variables" in doc.lower() for doc in results.documents
+        )
         self.assertTrue(found_variable_content, "Should find content about variables")
 
     def test_course_name_resolution(self):
@@ -88,11 +95,13 @@ class TestRealVectorStore(unittest.TestCase):
         # Add a course
         course = Course(title="Machine Learning Fundamentals", instructor="Dr. Smith")
         self.vector_store.add_course_metadata(course)
-        
+
         # Test resolving with exact match
-        resolved = self.vector_store._resolve_course_name("Machine Learning Fundamentals")
+        resolved = self.vector_store._resolve_course_name(
+            "Machine Learning Fundamentals"
+        )
         self.assertEqual(resolved, "Machine Learning Fundamentals")
-        
+
         # Test resolving with partial match
         resolved_partial = self.vector_store._resolve_course_name("Machine Learning")
         self.assertEqual(resolved_partial, "Machine Learning Fundamentals")
@@ -100,24 +109,42 @@ class TestRealVectorStore(unittest.TestCase):
     def test_search_with_filters(self):
         """Test search with course and lesson filters"""
         # Add test data with multiple courses and lessons
-        course1 = Course(title="Python Basics", lessons=[Lesson(lesson_number=1, title="Intro")])
-        course2 = Course(title="Advanced Python", lessons=[Lesson(lesson_number=1, title="Classes")])
-        
-        chunks1 = [CourseChunk(content="Python basic concepts", course_title="Python Basics", lesson_number=1, chunk_index=0)]
-        chunks2 = [CourseChunk(content="Python advanced features", course_title="Advanced Python", lesson_number=1, chunk_index=0)]
-        
+        course1 = Course(
+            title="Python Basics", lessons=[Lesson(lesson_number=1, title="Intro")]
+        )
+        course2 = Course(
+            title="Advanced Python", lessons=[Lesson(lesson_number=1, title="Classes")]
+        )
+
+        chunks1 = [
+            CourseChunk(
+                content="Python basic concepts",
+                course_title="Python Basics",
+                lesson_number=1,
+                chunk_index=0,
+            )
+        ]
+        chunks2 = [
+            CourseChunk(
+                content="Python advanced features",
+                course_title="Advanced Python",
+                lesson_number=1,
+                chunk_index=0,
+            )
+        ]
+
         self.vector_store.add_course_metadata(course1)
         self.vector_store.add_course_metadata(course2)
         self.vector_store.add_course_content(chunks1)
         self.vector_store.add_course_content(chunks2)
-        
+
         # Search with course filter
         results = self.vector_store.search("Python", course_name="Python Basics")
         self.assertFalse(results.is_empty(), "Should find results with course filter")
-        
+
         # Verify results are from correct course
         if results.metadata:
-            self.assertEqual(results.metadata[0]['course_title'], "Python Basics")
+            self.assertEqual(results.metadata[0]["course_title"], "Python Basics")
 
 
 class TestRealCourseSearchTool(unittest.TestCase):
@@ -127,9 +154,7 @@ class TestRealCourseSearchTool(unittest.TestCase):
         """Set up test fixtures"""
         self.temp_dir = tempfile.mkdtemp()
         self.vector_store = VectorStore(
-            chroma_path=self.temp_dir,
-            embedding_model="all-MiniLM-L6-v2",
-            max_results=5
+            chroma_path=self.temp_dir, embedding_model="all-MiniLM-L6-v2", max_results=5
         )
         self.search_tool = CourseSearchTool(self.vector_store)
 
@@ -145,23 +170,23 @@ class TestRealCourseSearchTool(unittest.TestCase):
             instructor="Prof. Data",
             lessons=[
                 Lesson(lesson_number=1, title="Introduction to Data Science"),
-                Lesson(lesson_number=2, title="Data Analysis with Python")
-            ]
+                Lesson(lesson_number=2, title="Data Analysis with Python"),
+            ],
         )
-        
+
         chunks = [
             CourseChunk(
                 content="Data science is an interdisciplinary field that uses algorithms and statistics to extract insights from data.",
                 course_title="Data Science 101",
                 lesson_number=1,
-                chunk_index=0
+                chunk_index=0,
             ),
             CourseChunk(
                 content="Python is a popular programming language for data analysis because of libraries like pandas and numpy.",
-                course_title="Data Science 101", 
+                course_title="Data Science 101",
                 lesson_number=2,
-                chunk_index=1
-            )
+                chunk_index=1,
+            ),
         ]
 
         self.vector_store.add_course_metadata(course)
@@ -169,19 +194,19 @@ class TestRealCourseSearchTool(unittest.TestCase):
 
         # Test search tool execution
         result = self.search_tool.execute("data science")
-        
+
         # Verify results
         self.assertIsInstance(result, str)
         self.assertNotIn("No relevant content found", result)
         self.assertIn("Data Science 101", result)
-        
+
         # Verify sources were tracked
         self.assertTrue(len(self.search_tool.last_sources) > 0)
 
     def test_search_tool_empty_database(self):
         """Test search tool behavior with empty database"""
         result = self.search_tool.execute("nonexistent query")
-        
+
         self.assertIn("No relevant content found", result)
         self.assertEqual(len(self.search_tool.last_sources), 0)
 
@@ -192,14 +217,12 @@ class TestRealSystemIntegration(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures"""
         self.temp_dir = tempfile.mkdtemp()
-        
+
         # Create real vector store and tool manager
         self.vector_store = VectorStore(
-            chroma_path=self.temp_dir,
-            embedding_model="all-MiniLM-L6-v2",
-            max_results=5
+            chroma_path=self.temp_dir, embedding_model="all-MiniLM-L6-v2", max_results=5
         )
-        
+
         self.tool_manager = ToolManager()
         self.search_tool = CourseSearchTool(self.vector_store)
         self.tool_manager.register_tool(self.search_tool)
@@ -216,23 +239,25 @@ class TestRealSystemIntegration(unittest.TestCase):
             CourseChunk(
                 content="This is test content about programming concepts.",
                 course_title="Test Course",
-                chunk_index=0
+                chunk_index=0,
             )
         ]
-        
+
         self.vector_store.add_course_metadata(course)
         self.vector_store.add_course_content(chunks)
-        
+
         # Test tool definitions
         tool_defs = self.tool_manager.get_tool_definitions()
         self.assertTrue(len(tool_defs) > 0)
         self.assertEqual(tool_defs[0]["name"], "search_course_content")
-        
+
         # Test tool execution
-        result = self.tool_manager.execute_tool("search_course_content", query="programming")
+        result = self.tool_manager.execute_tool(
+            "search_course_content", query="programming"
+        )
         self.assertIsInstance(result, str)
         self.assertNotIn("Tool 'search_course_content' not found", result)
-        
+
         # Test sources
         sources = self.tool_manager.get_last_sources()
         self.assertIsInstance(sources, list)
@@ -241,11 +266,17 @@ class TestRealSystemIntegration(unittest.TestCase):
         """Test system behavior when API key is missing"""
         # This test checks if the search components work independent of AI
         course = Course(title="API Test Course")
-        chunks = [CourseChunk(content="API testing content", course_title="API Test Course", chunk_index=0)]
-        
+        chunks = [
+            CourseChunk(
+                content="API testing content",
+                course_title="API Test Course",
+                chunk_index=0,
+            )
+        ]
+
         self.vector_store.add_course_metadata(course)
         self.vector_store.add_course_content(chunks)
-        
+
         # Search should work even without API key
         result = self.search_tool.execute("API testing")
         self.assertNotIn("No relevant content found", result)
@@ -268,33 +299,36 @@ class TestSystemDiagnostics(unittest.TestCase):
         try:
             import chromadb
             from chromadb.config import Settings
-            
+
             # Test ChromaDB creation
             client = chromadb.PersistentClient(
-                path=self.temp_dir,
-                settings=Settings(anonymized_telemetry=False)
+                path=self.temp_dir, settings=Settings(anonymized_telemetry=False)
             )
-            
+
             # Test embedding function
-            from chromadb.utils.embedding_functions import SentenceTransformerEmbeddingFunction
-            embedding_function = SentenceTransformerEmbeddingFunction(model_name="all-MiniLM-L6-v2")
-            
+            from chromadb.utils.embedding_functions import (
+                SentenceTransformerEmbeddingFunction,
+            )
+
+            embedding_function = SentenceTransformerEmbeddingFunction(
+                model_name="all-MiniLM-L6-v2"
+            )
+
             # Test collection creation
             collection = client.get_or_create_collection(
-                name="test_collection",
-                embedding_function=embedding_function
+                name="test_collection", embedding_function=embedding_function
             )
-            
+
             # Test basic operations
             collection.add(
                 documents=["This is a test document"],
                 metadatas=[{"test": "metadata"}],
-                ids=["test_id"]
+                ids=["test_id"],
             )
-            
+
             results = collection.query(query_texts=["test"], n_results=1)
-            self.assertTrue(len(results['documents'][0]) > 0)
-            
+            self.assertTrue(len(results["documents"][0]) > 0)
+
         except Exception as e:
             self.fail(f"ChromaDB functionality test failed: {e}")
 
@@ -302,6 +336,7 @@ class TestSystemDiagnostics(unittest.TestCase):
         """Test if sentence transformers are working"""
         try:
             from sentence_transformers import SentenceTransformer
+
             model = SentenceTransformer("all-MiniLM-L6-v2")
             embeddings = model.encode(["test sentence"])
             self.assertTrue(len(embeddings) > 0)
@@ -310,6 +345,6 @@ class TestSystemDiagnostics(unittest.TestCase):
             self.fail(f"Sentence transformers test failed: {e}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     print("Testing real system components...")
     unittest.main(verbosity=2)

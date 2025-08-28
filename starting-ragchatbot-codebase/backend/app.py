@@ -1,4 +1,5 @@
 import warnings
+
 warnings.filterwarnings("ignore", message="resource_tracker: There appear to be.*")
 
 from fastapi import FastAPI, HTTPException
@@ -16,10 +17,7 @@ from rag_system import RAGSystem
 app = FastAPI(title="Course Materials RAG System", root_path="")
 
 # Add trusted host middleware for proxy
-app.add_middleware(
-    TrustedHostMiddleware,
-    allowed_hosts=["*"]
-)
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=["*"])
 
 # Enable CORS with proper settings for proxy
 app.add_middleware(
@@ -34,29 +32,39 @@ app.add_middleware(
 # Initialize RAG system
 rag_system = RAGSystem(config)
 
+
 # Pydantic models for request/response
 class QueryRequest(BaseModel):
     """Request model for course queries"""
+
     query: str
     session_id: Optional[str] = None
 
+
 class SourceLink(BaseModel):
     """Model for source with optional clickable link"""
+
     text: str
     link: Optional[str] = None
 
+
 class QueryResponse(BaseModel):
     """Response model for course queries"""
+
     answer: str
     sources: List[SourceLink]
     session_id: str
 
+
 class CourseStats(BaseModel):
     """Response model for course statistics"""
+
     total_courses: int
     course_titles: List[str]
 
+
 # API Endpoints
+
 
 @app.post("/api/query", response_model=QueryResponse)
 async def query_documents(request: QueryRequest):
@@ -66,29 +74,29 @@ async def query_documents(request: QueryRequest):
         session_id = request.session_id
         if not session_id:
             session_id = rag_system.session_manager.create_session()
-        
+
         # Process query using RAG system
         answer, sources = rag_system.query(request.query, session_id)
-        
+
         # Convert source dictionaries to SourceLink objects
         source_links = []
         for source in sources:
             if isinstance(source, dict):
-                source_links.append(SourceLink(text=source['text'], link=source.get('link')))
+                source_links.append(
+                    SourceLink(text=source["text"], link=source.get("link"))
+                )
             else:
                 # Backward compatibility for string sources
                 source_links.append(SourceLink(text=str(source), link=None))
-        
-        return QueryResponse(
-            answer=answer,
-            sources=source_links,
-            session_id=session_id
-        )
+
+        return QueryResponse(answer=answer, sources=source_links, session_id=session_id)
     except Exception as e:
         import traceback
+
         error_detail = f"Error: {str(e)}\nTraceback: {traceback.format_exc()}"
         print(f"Query error: {error_detail}")
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.get("/api/courses", response_model=CourseStats)
 async def get_course_stats():
@@ -97,13 +105,15 @@ async def get_course_stats():
         analytics = rag_system.get_course_analytics()
         return CourseStats(
             total_courses=analytics["total_courses"],
-            course_titles=analytics["course_titles"]
+            course_titles=analytics["course_titles"],
         )
     except Exception as e:
         import traceback
+
         error_detail = f"Error: {str(e)}\nTraceback: {traceback.format_exc()}"
         print(f"Course stats error: {error_detail}")
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.on_event("startup")
 async def startup_event():
@@ -112,17 +122,27 @@ async def startup_event():
     if os.path.exists(docs_path):
         print("Loading initial documents...")
         try:
-            courses, chunks = rag_system.add_course_folder(docs_path, clear_existing=False)
+            courses, chunks = rag_system.add_course_folder(
+                docs_path, clear_existing=False
+            )
             print(f"✓ Successfully loaded {courses} courses with {chunks} chunks")
             if courses == 0:
-                print("⚠ WARNING: No courses were loaded. Check document format and ChromaDB compatibility.")
+                print(
+                    "⚠ WARNING: No courses were loaded. Check document format and ChromaDB compatibility."
+                )
         except Exception as e:
             import traceback
+
             error_detail = f"Error: {str(e)}\nTraceback: {traceback.format_exc()}"
             print(f"✗ CRITICAL ERROR loading documents: {error_detail}")
-            print("⚠ System will run with empty database - all content queries will fail")
+            print(
+                "⚠ System will run with empty database - all content queries will fail"
+            )
     else:
-        print(f"⚠ Documents folder '{docs_path}' not found - system will run with empty database")
+        print(
+            f"⚠ Documents folder '{docs_path}' not found - system will run with empty database"
+        )
+
 
 # Custom static file handler with no-cache headers for development
 from fastapi.staticfiles import StaticFiles
@@ -140,7 +160,7 @@ class DevStaticFiles(StaticFiles):
             response.headers["Pragma"] = "no-cache"
             response.headers["Expires"] = "0"
         return response
-    
-    
+
+
 # Serve static files for the frontend
 app.mount("/", StaticFiles(directory="../frontend", html=True), name="static")

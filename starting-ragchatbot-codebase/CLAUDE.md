@@ -30,7 +30,21 @@ Create `.env` file in project root with:
 ANTHROPIC_API_KEY=your_key_here
 ```
 
-**No testing or linting commands** - system uses runtime error handling without formal test suite.
+**Testing and code quality:**
+
+```bash
+# Run tests
+cd backend && uv run python tests/run_tests.py
+
+# Format code with Black
+./scripts/format.sh
+
+# Check code format
+./scripts/check-format.sh
+
+# Run comprehensive quality checks (format + tests)
+./scripts/quality-check.sh
+```
 
 ## Architecture
 
