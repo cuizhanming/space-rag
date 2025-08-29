@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LangChain Agentic RAG</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <h1 class="title">🤖 LangChain Agentic RAG</h1>
+                <p class="subtitle">Intelligent Knowledge Retrieval with LangChain & Gemini API</p>
+            </div>
+            <div class="status-indicator">
+                <span class="status-dot" id="statusDot"></span>
+                <span class="status-text" id="statusText">Connecting...</span>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main">
+            <!-- Chat Container -->
+            <div class="chat-container">
+                <div class="chat-header">
+                    <h2>💬 Chat</h2>
+                    <div class="chat-controls">
+                        <button class="btn btn-secondary" id="clearBtn">Clear Chat</button>
+                        <button class="btn btn-secondary" id="exportBtn">Export</button>
+                    </div>
+                </div>
+                
+                <div class="chat-messages" id="chatMessages">
+                    <div class="message assistant-message">
+                        <div class="message-content">
+                            <div class="message-header">
+                                <span class="message-role">🤖 Assistant</span>
+                                <span class="message-time"></span>
+                            </div>
+                            <div class="message-text">
+                                Hello! I'm your LangChain Agentic RAG assistant. I can help you search through the knowledge base and answer questions using intelligent reasoning. What would you like to know?
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <form class="chat-input-form" id="chatForm">
+                    <div class="input-group">
+                        <textarea 
+                            class="chat-input" 
+                            id="chatInput" 
+                            placeholder="Ask me anything about the knowledge base..."
+                            rows="1"
+                        ></textarea>
+                        <button type="submit" class="send-btn" id="sendBtn">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="22" y1="2" x2="11" y2="13"></line>
+                                <polygon points="22,2 15,22 11,13 2,9"></polygon>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="input-options">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="useAgent" checked>
+                            <span class="checkmark"></span>
+                            Use Agentic Reasoning
+                        </label>
+                        <select class="select" id="maxResults">
+                            <option value="3">3 Results</option>
+                            <option value="5" selected>5 Results</option>
+                            <option value="10">10 Results</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Sidebar -->
+            <aside class="sidebar">
+                <!-- Knowledge Base Stats -->
+                <div class="card">
+                    <h3 class="card-title">📚 Knowledge Base</h3>
+                    <div class="stats-grid">
+                        <div class="stat">
+                            <span class="stat-value" id="totalDocs">-</span>
+                            <span class="stat-label">Documents</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-value" id="totalChunks">-</span>
+                            <span class="stat-label">Chunks</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-value" id="totalEmbeddings">-</span>
+                            <span class="stat-label">Embeddings</span>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary btn-full" id="refreshStatsBtn">Refresh Stats</button>
+                </div>
+
+                <!-- Document Upload -->
+                <div class="card">
+                    <h3 class="card-title">📄 Upload Document</h3>
+                    <form id="uploadForm">
+                        <div class="form-group">
+                            <label for="docTitle">Title</label>
+                            <input type="text" id="docTitle" class="form-input" placeholder="Document title" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="docContent">Content</label>
+                            <textarea id="docContent" class="form-textarea" placeholder="Document content" rows="4" required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-full">Upload</button>
+                    </form>
+                </div>
+
+                <!-- Agent Tools -->
+                <div class="card">
+                    <h3 class="card-title">🛠️ Agent Tools</h3>
+                    <div id="agentTools" class="tools-list">
+                        <div class="loading">Loading tools...</div>
+                    </div>
+                </div>
+            </aside>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>&copy; 2024 LangChain Agentic RAG System. Powered by LangChain & Gemini API.</p>
+        </footer>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay hidden">
+        <div class="loading-spinner"></div>
+        <p>Processing your request...</p>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
